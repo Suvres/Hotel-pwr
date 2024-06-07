@@ -26,4 +26,9 @@
       <_ContentIncludedByDefault Remove="Hotel.BLL\obj\project.packagespec.json" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="HotelBookingApp.Domain\" />
+      <Folder Include="HotelBookingApp.Infrastructure\" />
+    </ItemGroup>
+
 </Project>

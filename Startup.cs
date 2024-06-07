@@ -23,10 +23,6 @@ public class Startup
     {
         services.AddControllers();
         Console.WriteLine("\n WORKS!!!!! \n");
-        // services.AddScoped<IRoomRepository, RoomRepository>();
-        services.AddScoped<IRoomService, RoomService>();
-        services.AddScoped<IBookingService, BookingService>();
-        services.AddScoped<IUserService, UserService>();
 
         services.AddMvc()
             .AddControllersAsServices(); 
