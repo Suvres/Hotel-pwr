@@ -1,53 +1,152 @@
 using HotelBookingApp.Domain.Interfaces;
 using HotelBookingApp.Domain.Models;
-using HotelBookingApp.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using MySql.Data.MySqlClient;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
 
-public class UserRepository : IUserRepository
+namespace HotelBookingApp.Infrastructure.Data
 {
-    private readonly AppDbContext _context;
-
-    public UserRepository(AppDbContext context)
+    public class UserRepository : IUserRepository
     {
-        _context = context;
-    }
+        private readonly string _connectionString;
 
-    public async Task<User> GetUserByIdAsync(int userId)
-    {
-        return await _context.Users.FindAsync(userId);
-    }
-
-    public async Task<IEnumerable<User>> GetAllUsersAsync()
-    {
-        return await _context.Users.ToListAsync();
-    }
-
-    public async Task<User> GetUserByUsernameAsync(string username)
-    {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-    }
-
-    public async Task AddUserAsync(User user)
-    {
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task UpdateUserAsync(User user)
-    {
-        _context.Users.Update(user);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task DeleteUserAsync(int userId)
-    {
-        var user = await GetUserByIdAsync(userId);
-        if (user != null)
+        public UserRepository(IConfiguration configuration)
         {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
+        }
+
+        public async Task<User> GetUserByIdAsync(int userId)
+        {
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand("SELECT * FROM Users WHERE UserId = @UserId", connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", userId);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new User
+                            {
+                                UserId = reader.GetInt32("UserId"),
+                                Username = reader.GetString("Username"),
+                                // Dodaj inne pola w zależności od struktury tabeli
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        {
+            var users = new List<User>();
+
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand("SELECT * FROM Users", connection))
+                {
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            users.Add(new User
+                            {
+                                UserId = reader.GetInt32("UserId"),
+                                Username = reader.GetString("Username"),
+                                // Dodaj inne pola w zależności od struktury tabeli
+                            });
+                        }
+                    }
+                }
+            }
+
+            return users;
+        }
+
+        public async Task<User> GetUserByUsernameAsync(string username)
+        {
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand("SELECT * FROM Users WHERE Username = @Username", connection))
+                {
+                    command.Parameters.AddWithValue("@Username", username);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new User
+                            {
+                                UserId = reader.GetInt32("UserId"),
+                                Username = reader.GetString("Username"),
+                                // Dodaj inne pola w zależności od struktury tabeli
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public async Task AddUserAsync(User user)
+        {
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command =
+                       new MySqlCommand(
+                           "INSERT INTO Users (Username, /* Inne kolumny */) VALUES (@Username, /* Inne wartości */)",
+                           connection))
+                {
+                    command.Parameters.AddWithValue("@Username", user.Username);
+                    // Dodaj inne parametry w zależności od struktury tabeli
+
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+        }
+
+        public async Task UpdateUserAsync(User user)
+        {
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command =
+                       new MySqlCommand(
+                           "UPDATE Users SET Username = @Username, /* Inne kolumny */ WHERE UserId = @UserId",
+                           connection))
+                {
+                    command.Parameters.AddWithValue("@Username", user.Username);
+                    command.Parameters.AddWithValue("@UserId", user.UserId);
+                    // Dodaj inne parametry w zależności od struktury tabeli
+
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+        }
+
+        public async Task DeleteUserAsync(int userId)
+        {
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand("DELETE FROM Users WHERE UserId = @UserId", connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", userId);
+
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
         }
     }
 }

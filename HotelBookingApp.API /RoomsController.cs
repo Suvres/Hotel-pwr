@@ -5,6 +5,7 @@ using HotelBookingApp.Domain.Services;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
+using HotelBookingApp.Infrastructure.Data;
 
 namespace HotelBookingApp.API.Controllers
 {

@@ -1,19 +1,8 @@
-using HotelBookingApp.Domain.Interfaces;  // Dla IUserRepository, IRoomRepository, IBookingRepository
 using HotelBookingApp.Domain.Models;
+using HotelBookingApp.Domain.Interfaces;
 
 namespace HotelBookingApp.Domain.Services
 {
-    public interface IRoomService
-    {
-        Task<IEnumerable<Room>> GetAvailableRoomsAsync(DateTime startDate, DateTime endDate);
-        Task<Room> GetRoomByIdAsync(int roomId);
-        Task<Room> CreateRoomAsync(Room room);
-        Task UpdateRoomAsync(Room room);
-        Task DeleteRoomAsync(int roomId);
-        Task<IEnumerable<Room>> GetAllRoomsAsync();
-    }
-    // here
-
     public class RoomService : IRoomService
     {
         private readonly IRoomRepository _roomRepository;
@@ -23,12 +12,6 @@ namespace HotelBookingApp.Domain.Services
             _roomRepository = roomRepository;
         }
 
-        // public async Task<IEnumerable<Room>> GetAvailableRoomsAsync(DateTime startDate, DateTime endDate)
-        // {
-        //     // Logika filtrująca pokoje na podstawie dostępności
-        //     var rooms = await _roomRepository.GetAllRoomsAsync();
-        //     return rooms.Where(r => r.IsAvailable && NoBookingOverlap(r, startDate, endDate));
-        // }
 
         public async Task<IEnumerable<Room>> GetAvailableRoomsAsync(DateTime startDate, DateTime endDate)
         {
@@ -51,7 +34,6 @@ namespace HotelBookingApp.Domain.Services
 
         public async Task<Room> CreateRoomAsync(Room room)
         {
-
             await _roomRepository.AddRoomAsync(room);
             return room;
         }

@@ -1,5 +1,4 @@
 namespace WebApplication1;
-using Microsoft.EntityFrameworkCore;
 using HotelBookingApp.Infrastructure.Data;
 using HotelBookingApp.Domain.Services;
 using HotelBookingApp.Domain.Interfaces;
@@ -24,6 +23,7 @@ public class Startup
     {
         services.AddControllers();
         Console.WriteLine("\n WORKS!!!!! \n");
+        // services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IRoomService, RoomService>();
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IUserService, UserService>();

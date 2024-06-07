@@ -1,57 +1,3 @@
-// using HotelBookingApp.Domain.Interfaces;
-// using HotelBookingApp.Domain.Models;
-// using HotelBookingApp.Infrastructure.Data;
-// using Microsoft.EntityFrameworkCore;
-// using System.Collections.Generic;
-// using System.Threading.Tasks;
-//
-// using System.Threading.Tasks;
-// using Microsoft.Extensions.Configuration;
-// using MySql.Data.MySqlClient;
-//
-//
-// public class RoomRepository : IRoomRepository
-// {
-//     private readonly AppDbContext _context;
-//
-//     public RoomRepository(AppDbContext context)
-//     {
-//         _context = context;
-//     }
-//
-//     public async Task<Room> GetRoomByIdAsync(int roomId)
-//     {
-//         return await _context.Rooms.FindAsync(roomId);
-//     }
-//
-//     public async Task<IEnumerable<Room>> GetAllRoomsAsync()
-//     {
-//         return await _context.Rooms.ToListAsync();
-//     }
-//
-//     public async Task AddRoomAsync(Room room)
-//     {
-//         _context.Rooms.Add(room);
-//         await _context.SaveChangesAsync();
-//     }
-//
-//     public async Task UpdateRoomAsync(Room room)
-//     {
-//         _context.Rooms.Update(room);
-//         await _context.SaveChangesAsync();
-//     }
-//
-//     public async Task DeleteRoomAsync(int roomId)
-//     {
-//         var room = await GetRoomByIdAsync(roomId);
-//         if (room != null)
-//         {
-//             _context.Rooms.Remove(room);
-//             await _context.SaveChangesAsync();
-//         }
-//     }
-// }
-
 using HotelBookingApp.Domain.Interfaces;
 using HotelBookingApp.Domain.Models;
 using Microsoft.Extensions.Configuration;
@@ -59,144 +5,149 @@ using MySql.Data.MySqlClient;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-public class RoomRepository : IRoomRepository
+namespace HotelBookingApp.Infrastructure.Data
 {
-    private readonly string _connectionString;
-
-    public RoomRepository(IConfiguration configuration)
+    public class RoomRepository : IRoomRepository
     {
-        _connectionString = configuration.GetConnectionString("NewConnection");
-    }
+        private readonly string _connectionString;
 
-    public async Task<Room> GetRoomByIdAsync(int roomId)
-    {
-        Room room = null;
-        var query = "SELECT RoomId, RoomNumber, Capacity FROM Rooms WHERE RoomId = @RoomId";
-
-        using (var connection = new MySqlConnection(_connectionString))
-        using (var command = new MySqlCommand(query, connection))
+        public RoomRepository(IConfiguration configuration)
         {
-            command.Parameters.AddWithValue("@RoomId", roomId);
-            await connection.OpenAsync();
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
+        }
 
-            using (var reader = await command.ExecuteReaderAsync())
+        public async Task<Room> GetRoomByIdAsync(int roomId)
+        {
+            Room room = null;
+            var query = "SELECT RoomId, RoomNumber, Capacity FROM Rooms WHERE RoomId = @RoomId";
+
+            using (var connection = new MySqlConnection(_connectionString))
+            using (var command = new MySqlCommand(query, connection))
             {
-                if (await reader.ReadAsync())
+                command.Parameters.AddWithValue("@RoomId", roomId);
+                await connection.OpenAsync();
+
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    room = new Room
+                    if (await reader.ReadAsync())
                     {
-                        RoomId = reader.GetInt32(reader.GetOrdinal("RoomId")),
-                        Number = reader.GetString(reader.GetOrdinal("RoomNumber")),
-                        Capacity = reader.GetInt32(reader.GetOrdinal("Capacity"))
-                    };
+                        room = new Room
+                        {
+                            RoomId = reader.GetInt32(reader.GetOrdinal("RoomId")),
+                            Number = reader.GetString(reader.GetOrdinal("RoomNumber")),
+                            Capacity = reader.GetInt32(reader.GetOrdinal("Capacity"))
+                        };
+                    }
                 }
             }
+
+            return room;
         }
-        return room;
-    }
 
-    public async Task<IEnumerable<Room>> GetAllRoomsAsync()
-    {
-        var rooms = new List<Room>();
-        var query = "SELECT RoomId, RoomNumber, Capacity FROM Rooms";
-
-        using (var connection = new MySqlConnection(_connectionString))
-        using (var command = new MySqlCommand(query, connection))
+        public async Task<IEnumerable<Room>> GetAllRoomsAsync()
         {
-            await connection.OpenAsync();
-            using (var reader = await command.ExecuteReaderAsync())
+            var rooms = new List<Room>();
+            var query = "SELECT RoomId, RoomNumber, Capacity FROM Rooms";
+
+            using (var connection = new MySqlConnection(_connectionString))
+            using (var command = new MySqlCommand(query, connection))
             {
-                while (await reader.ReadAsync())
+                await connection.OpenAsync();
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    var room = new Room
+                    while (await reader.ReadAsync())
                     {
-                        RoomId = reader.GetInt32(reader.GetOrdinal("RoomId")),
-                        Number = reader.GetString(reader.GetOrdinal("RoomNumber")),
-                        Capacity = reader.GetInt32(reader.GetOrdinal("Capacity"))
-                    };
-                    rooms.Add(room);
+                        var room = new Room
+                        {
+                            RoomId = reader.GetInt32(reader.GetOrdinal("RoomId")),
+                            Number = reader.GetString(reader.GetOrdinal("RoomNumber")),
+                            Capacity = reader.GetInt32(reader.GetOrdinal("Capacity"))
+                        };
+                        rooms.Add(room);
+                    }
                 }
             }
+
+            return rooms;
         }
-        return rooms;
-    }
-    
-    public async Task<IEnumerable<Room>> GetReservedRoomsAsync(DateTime startDate, DateTime endDate)
-    {
-        var reservedRooms = new List<Room>();
-        var query = @"
+
+        public async Task<IEnumerable<Room>> GetReservedRoomsAsync(DateTime startDate, DateTime endDate)
+        {
+            var reservedRooms = new List<Room>();
+            var query = @"
             SELECT r.RoomId, r.RoomNumber, r.Capacity 
             FROM Rooms r
             INNER JOIN Reservations res ON r.RoomId = res.RoomId
             WHERE res.StartDate < @EndDate AND res.EndDate > @StartDate";
 
-        using (var connection = new MySqlConnection(_connectionString))
-        using (var command = new MySqlCommand(query, connection))
-        {
-            command.Parameters.AddWithValue("@StartDate", startDate);
-            command.Parameters.AddWithValue("@EndDate", endDate);
-
-            await connection.OpenAsync();
-            using (var reader = await command.ExecuteReaderAsync())
+            using (var connection = new MySqlConnection(_connectionString))
+            using (var command = new MySqlCommand(query, connection))
             {
-                while (await reader.ReadAsync())
+                command.Parameters.AddWithValue("@StartDate", startDate);
+                command.Parameters.AddWithValue("@EndDate", endDate);
+
+                await connection.OpenAsync();
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    var room = new Room
+                    while (await reader.ReadAsync())
                     {
-                        RoomId = reader.GetInt32(reader.GetOrdinal("RoomId")),
-                        Number = reader.GetString(reader.GetOrdinal("RoomNumber")),
-                        Capacity = reader.GetInt32(reader.GetOrdinal("Capacity"))
-                    };
-                    reservedRooms.Add(room);
+                        var room = new Room
+                        {
+                            RoomId = reader.GetInt32(reader.GetOrdinal("RoomId")),
+                            Number = reader.GetString(reader.GetOrdinal("RoomNumber")),
+                            Capacity = reader.GetInt32(reader.GetOrdinal("Capacity"))
+                        };
+                        reservedRooms.Add(room);
+                    }
                 }
+            }
+
+            return reservedRooms;
+        }
+
+        public async Task AddRoomAsync(Room room)
+        {
+            var query = "INSERT INTO Rooms (RoomNumber, Capacity) VALUES (@RoomNumber, @Capacity)";
+
+            using (var connection = new MySqlConnection(_connectionString))
+            using (var command = new MySqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@RoomNumber", room.Number);
+                command.Parameters.AddWithValue("@Capacity", room.Capacity);
+
+                await connection.OpenAsync();
+                await command.ExecuteNonQueryAsync();
             }
         }
 
-        return reservedRooms;
-    }
-
-    public async Task AddRoomAsync(Room room)
-    {
-        var query = "INSERT INTO Rooms (RoomNumber, Capacity) VALUES (@RoomNumber, @Capacity)";
-
-        using (var connection = new MySqlConnection(_connectionString))
-        using (var command = new MySqlCommand(query, connection))
+        public async Task UpdateRoomAsync(Room room)
         {
-            command.Parameters.AddWithValue("@RoomNumber", room.Number);
-            command.Parameters.AddWithValue("@Capacity", room.Capacity);
+            var query = "UPDATE Rooms SET RoomNumber = @RoomNumber, Capacity = @Capacity WHERE RoomId = @RoomId";
 
-            await connection.OpenAsync();
-            await command.ExecuteNonQueryAsync();
+            using (var connection = new MySqlConnection(_connectionString))
+            using (var command = new MySqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@RoomNumber", room.Number);
+                command.Parameters.AddWithValue("@Capacity", room.Capacity);
+                command.Parameters.AddWithValue("@RoomId", room.RoomId);
+
+                await connection.OpenAsync();
+                await command.ExecuteNonQueryAsync();
+            }
         }
-    }
 
-    public async Task UpdateRoomAsync(Room room)
-    {
-        var query = "UPDATE Rooms SET RoomNumber = @RoomNumber, Capacity = @Capacity WHERE RoomId = @RoomId";
-
-        using (var connection = new MySqlConnection(_connectionString))
-        using (var command = new MySqlCommand(query, connection))
+        public async Task DeleteRoomAsync(int roomId)
         {
-            command.Parameters.AddWithValue("@RoomNumber", room.Number);
-            command.Parameters.AddWithValue("@Capacity", room.Capacity);
-            command.Parameters.AddWithValue("@RoomId", room.RoomId);
+            var query = "DELETE FROM Rooms WHERE RoomId = @RoomId";
 
-            await connection.OpenAsync();
-            await command.ExecuteNonQueryAsync();
-        }
-    }
+            using (var connection = new MySqlConnection(_connectionString))
+            using (var command = new MySqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@RoomId", roomId);
 
-    public async Task DeleteRoomAsync(int roomId)
-    {
-        var query = "DELETE FROM Rooms WHERE RoomId = @RoomId";
-
-        using (var connection = new MySqlConnection(_connectionString))
-        using (var command = new MySqlCommand(query, connection))
-        {
-            command.Parameters.AddWithValue("@RoomId", roomId);
-
-            await connection.OpenAsync();
-            await command.ExecuteNonQueryAsync();
+                await connection.OpenAsync();
+                await command.ExecuteNonQueryAsync();
+            }
         }
     }
 }
